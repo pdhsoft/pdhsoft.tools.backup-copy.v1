@@ -12,6 +12,11 @@ param(
 )
 
 try {
+    # Prüfe ob Robocopy verfügbar ist
+    if (-not (Get-Command "robocopy.exe" -ErrorAction SilentlyContinue)) {
+        throw "Robocopy ist nicht verfügbar. Robocopy ist Teil des Windows Resource Kit und sollte standardmäßig installiert sein."
+    }
+
     # Überprüfe ob Quell- und Zielverzeichnis existieren
     if (-not (Test-Path $SourcePath)) {
         throw "Quellverzeichnis existiert nicht: $SourcePath"
