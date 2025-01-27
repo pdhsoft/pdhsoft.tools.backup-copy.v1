@@ -36,7 +36,7 @@ try {
         "/MT:8"        # Multithreading für bessere Performance
         "/COPY:DT"     # Kopiert nur Daten und Timestamps (keine Attribute)
         "/TEE"         # Zeigt Fehler im Konsolenfenster
-        "/PROGRESS"    # Zeigt Fortschrittsbalken
+        "/bytes"       # Zeigt Bytes statt Prozent
     )
 
     switch ($OverwriteMode) {
@@ -45,21 +45,41 @@ try {
         "IfNewer" { $robocopyParams += "/XO" }
     }
 
-    # Führe Robocopy aus
-    $result = Start-Process robocopy -ArgumentList $robocopyParams -NoNewWindow -Wait -PassThru
+    # Temporärer Log-Pfad
+    $logFile = Join-Path $env:TEMP "robocopy_progress.log"
+
+    # Robocopy ausführen
+    $process = Start-Process robocopy -ArgumentList $robocopyParams -NoNewWindow -PassThru -RedirectStandardOutput $logFile
+
+    # Fortschrittsanzeige
+    while (!$process.HasExited) {
+        if (Test-Path $logFile) {
+            $currentOperation = (Get-Content $logFile -Tail 1) -join " "
+            if (-not [string]::IsNullOrWhiteSpace($currentOperation)) {
+                Write-Progress -Activity "Kopiere Dateien" -Status ($currentOperation.ToString())
+            }
+            else {
+                Write-Progress -Activity "Kopiere Dateien" -Status "Warte auf Robocopy..."
+            }
+        }
+        Start-Sleep -Milliseconds 100
+    }
+
+    # Aufräumen
+    Remove-Item $logFile -ErrorAction SilentlyContinue
 
     # Überprüfe Robocopy Exit Code
-    switch ($result.ExitCode) {
+    switch ($process.ExitCode) {
         0 { Write-Host "Erfolg: Keine Dateien wurden kopiert." }
         1 { Write-Host "Erfolg: Dateien wurden erfolgreich kopiert." }
         2 { Write-Host "Erfolg: Zusätzliche Dateien oder Ordner wurden ignoriert." }
         4 { Write-Host "Warnung: Einige Fehler während des Kopiervorgangs." }
         8 { throw "Fehler: Einige Dateien oder Ordner konnten nicht kopiert werden." }
         16 { throw "Schwerwiegender Fehler beim Kopieren." }
-        default { throw "Unbekannter Fehler: $($result.ExitCode)" }
+        default { throw "Unbekannter Fehler: $($process.ExitCode)" }
     }
 
-    exit $result.ExitCode
+    exit $process.ExitCode
 }
 catch {
     Write-Error $_.Exception.Message
