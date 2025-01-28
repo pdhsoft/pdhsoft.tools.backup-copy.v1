@@ -37,6 +37,10 @@ try {
         "/COPY:DT"     # Kopiert nur Daten und Timestamps (keine Attribute)
         "/TEE"         # Zeigt Fehler im Konsolenfenster
         "/bytes"       # Zeigt Bytes statt Prozent
+        "/XD"          # Verzeichnisse ausschließen
+        "`$Recycle.Bin"  # Windows Papierkorb (neuere Systeme)
+        "RECYCLER"     # Windows Papierkorb (ältere Systeme)
+        "System Volume Information"  # System-Verzeichnis
     )
 
     switch ($OverwriteMode) {
